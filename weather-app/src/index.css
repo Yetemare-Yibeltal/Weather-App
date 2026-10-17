@@ -1,0 +1,10 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.App{
+  min-height: 100vh;
+  display: grid;
+  background:linear-gradient(rgba(4, 109, 154, 0.952),rgba(3, 140, 245, 0.267));
+}
