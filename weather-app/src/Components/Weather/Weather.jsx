@@ -1,5 +1,5 @@
 // Import React hooks and component styles
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import "../Weather/Weather.css";
 
 // Import image assets
@@ -16,10 +16,10 @@ import windIcon from "../../images/wind-icon.png";
 import { API_KEY } from "../../Apikey.js";
 
 const Weather = () => {
-  // Reference to the input field for city search
-  const inputRef = useRef();
+  // Reference to the input field
+  const inputRef = useRef(null);
 
-  // Mapping weather condition codes to icon images
+  // Mapping weather condition codes to icons
   const allIcons = {
     "01d": clear_icon,
     "01n": clear_icon,
@@ -37,101 +37,139 @@ const Weather = () => {
     "13n": snowIcon,
   };
 
-  // State to hold weather data after fetching
+  // Store weather data
   const [weatherData, setWeatherData] = useState(false);
 
-  // Function to fetch weather data from OpenWeatherMap API
-const search = async (city) => {
-  if (city === "") {
-    alert("Please enter a city name.");
-    return;
-  }
+  // Fetch weather data for a city
+  const search = useCallback(async (city) => {
+    const cityName = city.trim();
 
-  try {
-    // Step 1: Get coordinates from Geocoding API
-    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`;
-    const geoResponse = await fetch(geoUrl);
-    const geoData = await geoResponse.json();
-
-    if (!geoData.length) {
-      alert("City not found. Try a more precise name.");
+    if (!cityName) {
+      alert("Please enter a city name.");
       return;
     }
 
-    const { lat, lon, name, country } = geoData[0];
+    try {
+      // Step 1: Get city coordinates
+      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(
+        cityName
+      )}&limit=1&appid=${API_KEY}`;
 
-    // Step 2: Use coordinates to fetch weather
-    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
-    const weatherResponse = await fetch(weatherUrl);
-    const weatherData = await weatherResponse.json();
+      const geoResponse = await fetch(geoUrl);
 
-    const icon = allIcons[weatherData.weather[0].icon] || clear_icon;
+      if (!geoResponse.ok) {
+        throw new Error("Unable to find city coordinates.");
+      }
 
-    setWeatherData({
-      humidity: weatherData.main.humidity,
-      windSpeed: weatherData.wind.speed,
-      temperature: Math.floor(weatherData.main.temp),
-      location: `The city ${name} is found in: ${country}`,
-      icon: icon,
-    });
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    setWeatherData(false);
-  }
-};
+      const geoData = await geoResponse.json();
 
-  // Fetch default weather data for "Adis abeba" on initial load
+      if (!geoData.length) {
+        alert("City not found. Try a more precise name.");
+        return;
+      }
+
+      const { lat, lon, name, country } = geoData[0];
+
+      // Step 2: Fetch weather using coordinates
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+
+      const weatherResponse = await fetch(weatherUrl);
+
+      if (!weatherResponse.ok) {
+        throw new Error("Unable to fetch weather data.");
+      }
+
+      const data = await weatherResponse.json();
+
+      const icon =
+        allIcons[data.weather?.[0]?.icon] || clear_icon;
+
+      setWeatherData({
+        humidity: data.main.humidity,
+        windSpeed: data.wind.speed,
+        temperature: Math.floor(data.main.temp),
+        location: `The city ${name} is found in: ${country}`,
+        icon,
+      });
+    } catch (error) {
+      console.error("Error fetching weather data:", error);
+      alert(
+        "Unable to retrieve weather data. Check your internet connection and API key, then try again."
+      );
+    }
+  }, [allIcons]);
+
+  // Fetch default weather on initial load
   useEffect(() => {
-    search("Adiss abeba");
-  }, []);
+    search("Addis Ababa");
+  }, [search]);
+
+  // Search when the user presses Enter
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") {
+      search(inputRef.current?.value || "");
+    }
+  };
 
   return (
-      <div className="weather">
-        <h1 className="weather-header">Weather Condition App</h1>
-        {/* Search bar with input and clickable search icon */}
-        <div className="search-bar">
-          <input type="text" ref={inputRef} placeholder="Enter City Name.... " />
+    <div className="weather">
+      <h1 className="weather-header">Weather Condition App</h1>
+
+      {/* City search */}
+      <div className="search-bar">
+        <input
+          type="text"
+          ref={inputRef}
+          placeholder="Enter City Name..."
+          onKeyDown={handleKeyDown}
+        />
+
+        <img
+          src={SearchIcon}
+          alt="Search weather"
+          role="button"
+          tabIndex={0}
+          onClick={() => search(inputRef.current?.value || "")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              search(inputRef.current?.value || "");
+            }
+          }}
+        />
+      </div>
+
+      {/* Display weather data */}
+      {weatherData && (
+        <>
           <img
-            src={SearchIcon}
-            alt=""
-            onClick={() => search(inputRef.current.value)}
+            src={weatherData.icon}
+            alt="Current weather"
+            className="weather-icon"
           />
-        </div>
 
-        {/* Conditional rendering: only show weather info if data is available */}
-        {weatherData ? (
-          <>
-            {/* Weather icon */}
-            {weatherData && (
-              <img src={weatherData.icon} alt="" className="weather-icon" />
-            )}
+          <p className="temperature">{weatherData.temperature} °C</p>
+          <p className="location">{weatherData.location}</p>
 
-            {/* Temperature and location */}
-            <p className="temperature"> {weatherData.temperature} °C</p>
-            <p className="location">{weatherData.location}</p>
-
-            {/* Humidity and wind speed section */}
-            <div className="weather-data">
-              <div className="col">
-                <img src={humidityIcons} alt="" />
-                <div>
-                  <p>{weatherData.humidity} %</p>
-                  <span>Hummidity</span>
-                </div>
-              </div>
-              <div className="col">
-                <img src={windIcon} alt="" />
-                <div>
-                  <p>{weatherData.windSpeed} km/hr</p>
-                  <span>Wind Speed</span>
-                </div>
+          <div className="weather-data">
+            <div className="col">
+              <img src={humidityIcons} alt="Humidity" />
+              <div>
+                <p>{weatherData.humidity} %</p>
+                <span>Humidity</span>
               </div>
             </div>
-          </>
-        ) : (
-          <></> // Empty fallback if no data is available
-        )}
-      </div>
+
+            <div className="col">
+              <img src={windIcon} alt="Wind speed" />
+              <div>
+                <p>{weatherData.windSpeed} km/hr</p>
+                <span>Wind Speed</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 
