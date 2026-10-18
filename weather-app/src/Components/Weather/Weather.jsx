@@ -100,6 +100,7 @@ const Weather = () => {
   }, [allIcons]);
 
   // Fetch default weather on initial load
+// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     search("Addis Ababa");
   }, [search]);
