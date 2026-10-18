@@ -15,12 +15,8 @@ import windIcon from "../../images/wind-icon.png";
 // Import API key from local config file
 import { API_KEY } from "../../Apikey.js";
 
-const Weather = () => {
-  // Reference to the input field
-  const inputRef = useRef(null);
 
-  // Mapping weather condition codes to icons
-  const allIcons = {
+const allIcons = {
     "01d": clear_icon,
     "01n": clear_icon,
     "02d": CloudyIcon,
@@ -35,7 +31,14 @@ const Weather = () => {
     "10n": rainIcon,
     "13d": snowIcon,
     "13n": snowIcon,
-  };
+  }
+
+const Weather = () => {
+  // Reference to the input field
+  const inputRef = useRef(null);
+
+  // Mapping weather condition codes to icons
+;
 
   // Store weather data
   const [weatherData, setWeatherData] = useState(false);
@@ -97,10 +100,9 @@ const Weather = () => {
         "Unable to retrieve weather data. Check your internet connection and API key, then try again."
       );
     }
-  }, [allIcons]);
+  }, []);
 
   // Fetch default weather on initial load
-// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     search("Addis Ababa");
   }, [search]);
